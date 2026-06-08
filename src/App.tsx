@@ -14,7 +14,7 @@ import { useEffect } from "react";
 import { useAuth } from "./stores/authStore";
 
 function AppContent() {
-  const { fetchUser, user } = useAuth();
+  const { fetchUser } = useAuth();
 
   useEffect(() => {
     fetchUser();
