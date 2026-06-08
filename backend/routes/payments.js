@@ -75,7 +75,7 @@ router.post('/', authenticateToken, asyncHandler(async (req, res) => {
 
   const id = `p_${Date.now()}`;
   await pool.query(
-    'INSERT INTO payments (id, hostel_id, tenant_id, amount, type, method, status, due_date, month_for, invoice_number, notes) VALUES ($3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)',
+    'INSERT INTO payments (id, hostel_id, tenant_id, amount, type, method, status, due_date, month_for, invoice_number, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     [id, hostelId, tenantId, amount, type, method, status || 'pending', dueDate, monthFor, invoiceNumber, notes || null]
   );
 
@@ -87,12 +87,12 @@ router.put('/:id', authenticateToken, asyncHandler(async (req, res) => {
   const { amount, type, method, status, dueDate, paidDate, monthFor, invoiceNumber, notes } = req.body;
 
   // Check permissions
-  const result = await pool.query('SELECT * FROM payments WHERE id = $14', [req.params.id]);
-  if (result.rows.length === 0) {
+  const [result] = await pool.query('SELECT * FROM payments WHERE id = ?', [req.params.id]);
+  if (result.length === 0) {
     return res.status(404).json({ error: 'Payment not found' });
   }
 
-  if (req.user.role !== 'super_admin' && result.rows[0].hostel_id !== req.user.hostelId) {
+  if (req.user.role !== 'super_admin' && result[0].hostel_id !== req.user.hostelId) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -101,57 +101,57 @@ router.put('/:id', authenticateToken, asyncHandler(async (req, res) => {
   const values = [];
 
   if (amount !== undefined) {
-    updates.push('amount = $15');
+    updates.push('amount = ?');
     values.push(amount);
   }
   if (type !== undefined) {
-    updates.push('type = $16');
+    updates.push('type = ?');
     values.push(type);
   }
   if (method !== undefined) {
-    updates.push('method = $17');
+    updates.push('method = ?');
     values.push(method);
   }
   if (status !== undefined) {
-    updates.push('status = $18');
+    updates.push('status = ?');
     values.push(status);
   }
   if (dueDate !== undefined) {
-    updates.push('due_date = $19');
+    updates.push('due_date = ?');
     values.push(dueDate);
   }
   if (paidDate !== undefined) {
-    updates.push('paid_date = $20');
+    updates.push('paid_date = ?');
     values.push(paidDate);
   }
   if (monthFor !== undefined) {
-    updates.push('month_for = $21');
+    updates.push('month_for = ?');
     values.push(monthFor);
   }
   if (invoiceNumber !== undefined) {
-    updates.push('invoice_number = $22');
+    updates.push('invoice_number = ?');
     values.push(invoiceNumber);
   }
   if (notes !== undefined) {
-    updates.push('notes = $23');
+    updates.push('notes = ?');
     values.push(notes);
   }
 
-  if (result.rows.length === 0) {
+  if (result.length === 0) {
     return res.status(400).json({ error: 'No fields to update' });
   }
 
   values.push(req.params.id);
   await pool.query(
-    `UPDATE payments SET ${updates.join(', ')} WHERE id = $24`,
+    `UPDATE payments SET ${updates.join(', ')} WHERE id = ?`,
     values
   );
 
   // Update hostel revenue if payment is marked as paid
-  if (status === 'paid' && result.rows[0].status !== 'paid') {
+  if (status === 'paid' && result[0].status !== 'paid') {
     await pool.query(
-      'UPDATE hostels SET monthly_revenue = monthly_revenue + ? WHERE id = $26',
-      [amount, result.rows[0].hostel_id]
+      'UPDATE hostels SET monthly_revenue = monthly_revenue + ? WHERE id = ?',
+      [amount, result[0].hostel_id]
     );
   }
 
@@ -163,25 +163,25 @@ router.post('/:id/mark-paid', authenticateToken, asyncHandler(async (req, res) =
   const { method } = req.body;
 
   // Check permissions
-  const result = await pool.query('SELECT * FROM payments WHERE id = $27', [req.params.id]);
-  if (result.rows.length === 0) {
+  const [result] = await pool.query('SELECT * FROM payments WHERE id = ?', [req.params.id]);
+  if (result.length === 0) {
     return res.status(404).json({ error: 'Payment not found' });
   }
 
-  if (req.user.role !== 'super_admin' && result.rows[0].hostel_id !== req.user.hostelId) {
+  if (req.user.role !== 'super_admin' && result[0].hostel_id !== req.user.hostelId) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  const payment = result.rows[0];
+  const payment = result[0];
 
   await pool.query(
-    'UPDATE payments SET status = "paid", method = $28, paid_date = CURDATE() WHERE id = $29',
+    'UPDATE payments SET status = "paid", method = ?, paid_date = CURDATE() WHERE id = ?',
     [method, req.params.id]
   );
 
   // Update hostel revenue
   await pool.query(
-    'UPDATE hostels SET monthly_revenue = monthly_revenue + ? WHERE id = $31',
+    'UPDATE hostels SET monthly_revenue = monthly_revenue + ? WHERE id = ?',
     [payment.amount, payment.hostel_id]
   );
 

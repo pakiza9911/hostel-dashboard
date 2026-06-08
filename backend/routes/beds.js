@@ -63,13 +63,13 @@ router.post('/', authenticateToken, asyncHandler(async (req, res) => {
 
   const id = `${roomId}_b${label}`;
   await pool.query(
-    'INSERT INTO beds (id, room_id, hostel_id, label) VALUES ($3, $4, $5, $6)',
+    'INSERT INTO beds (id, room_id, hostel_id, label) VALUES (?, ?, ?, ?)',
     [id, roomId, hostelId, label]
   );
 
   // Update hostel stats
   await pool.query(
-    'UPDATE hostels SET total_beds = total_beds + 1 WHERE id = $7',
+    'UPDATE hostels SET total_beds = total_beds + 1 WHERE id = ?',
     [hostelId]
   );
 
@@ -81,40 +81,40 @@ router.put('/:id', authenticateToken, asyncHandler(async (req, res) => {
   const { tenantId, status } = req.body;
 
   // Check permissions
-  const result = await pool.query('SELECT * FROM beds WHERE id = $8', [req.params.id]);
-  if (result.rows.length === 0) {
+  const [result] = await pool.query('SELECT * FROM beds WHERE id = ?', [req.params.id]);
+  if (result.length === 0) {
     return res.status(404).json({ error: 'Bed not found' });
   }
 
-  if (req.user.role !== 'super_admin' && result.rows[0].hostel_id !== req.user.hostelId) {
+  if (req.user.role !== 'super_admin' && result[0].hostel_id !== req.user.hostelId) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  const currentBed = result.rows[0];
+  const currentBed = result[0];
   const hostelId = currentBed.hostel_id;
 
   // If assigning a new tenant, free the old bed
   if (tenantId && tenantId !== currentBed.tenant_id) {
     await pool.query(
-      'UPDATE beds SET tenant_id = NULL, status = "vacant" WHERE tenant_id = $9',
+      'UPDATE beds SET tenant_id = NULL, status = "vacant" WHERE tenant_id = ?',
       [tenantId]
     );
   }
 
   await pool.query(
-    'UPDATE beds SET tenant_id = $10, status = ? WHERE id = $12',
+    'UPDATE beds SET tenant_id = ?, status = ? WHERE id = ?',
     [tenantId || null, status || (tenantId ? 'occupied'   : 'vacant'), req.params.id]
   );
 
   // Update hostel occupied beds count
   if (tenantId && !currentBed.tenant_id) {
     await pool.query(
-      'UPDATE hostels SET occupied_beds = occupied_beds + 1 WHERE id = $14',
+      'UPDATE hostels SET occupied_beds = occupied_beds + 1 WHERE id = ?',
       [hostelId]
     );
   } else if (!tenantId && currentBed.tenant_id) {
     await pool.query(
-      'UPDATE hostels SET occupied_beds = occupied_beds - 1 WHERE id = $15',
+      'UPDATE hostels SET occupied_beds = occupied_beds - 1 WHERE id = ?',
       [hostelId]
     );
   }
@@ -125,29 +125,29 @@ router.put('/:id', authenticateToken, asyncHandler(async (req, res) => {
 // Delete bed
 router.delete('/:id', authenticateToken, asyncHandler(async (req, res) => {
   // Check permissions
-  const result = await pool.query('SELECT * FROM beds WHERE id = $16', [req.params.id]);
-  if (result.rows.length === 0) {
+  const [result] = await pool.query('SELECT * FROM beds WHERE id = ?', [req.params.id]);
+  if (result.length === 0) {
     return res.status(404).json({ error: 'Bed not found' });
   }
 
-  if (req.user.role !== 'super_admin' && result.rows[0].hostel_id !== req.user.hostelId) {
+  if (req.user.role !== 'super_admin' && result[0].hostel_id !== req.user.hostelId) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  const hostelId = result.rows[0].hostel_id;
-  const wasOccupied = result.rows[0].tenant_id !== null;
+  const hostelId = result[0].hostel_id;
+  const wasOccupied = result[0].tenant_id !== null;
   
-  await pool.query('DELETE FROM beds WHERE id = $17', [req.params.id]);
+  await pool.query('DELETE FROM beds WHERE id = ?', [req.params.id]);
 
   // Update hostel stats
   await pool.query(
-    'UPDATE hostels SET total_beds = total_beds - 1 WHERE id = $18',
+    'UPDATE hostels SET total_beds = total_beds - 1 WHERE id = ?',
     [hostelId]
   );
 
   if (wasOccupied) {
     await pool.query(
-      'UPDATE hostels SET occupied_beds = occupied_beds - 1 WHERE id = $19',
+      'UPDATE hostels SET occupied_beds = occupied_beds - 1 WHERE id = ?',
       [hostelId]
     );
   }

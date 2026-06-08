@@ -94,7 +94,7 @@ router.post('/', authenticateToken, requireRole('super_admin', 'owner'), asyncHa
   const finalHostelId = req.user.role === 'owner' ? (hostelId || req.user.hostelId)  : hostelId;
 
   await pool.query(
-    'INSERT INTO users (id, name, email, password_hash, role, hostel_id, permissions) VALUES ($7, $8, $9, $10, $11, $12, $13)',
+    'INSERT INTO users (id, name, email, password_hash, role, hostel_id, permissions) VALUES (?, ?, ?, ?, ?, ?, ?)',
     [id, name, email, passwordHash, role, finalHostelId || null, permissions ? JSON.stringify(permissions) : null]
   );
 
@@ -106,12 +106,12 @@ router.put('/:id', authenticateToken, asyncHandler(async (req, res) => {
   const { name, email, role, hostelId, permissions } = req.body;
 
   // Check permissions
-  const result = await pool.query('SELECT * FROM users WHERE id = $15', [req.params.id]);
-  if (result.rows.length === 0) {
+  const [result] = await pool.query('SELECT * FROM users WHERE id = ?', [req.params.id]);
+  if (result.length === 0) {
     return res.status(404).json({ error: 'User not found' });
   }
 
-  const targetUser = result.rows[0];
+  const targetUser = result[0];
 
   // Super admin can update anyone
   // Owners can update managers in their hostel
@@ -146,33 +146,33 @@ router.put('/:id', authenticateToken, asyncHandler(async (req, res) => {
   const values = [];
 
   if (name !== undefined) {
-    updates.push('name = $16');
+    updates.push('name = ?');
     values.push(name);
   }
   if (email !== undefined) {
-    updates.push('email = $17');
+    updates.push('email = ?');
     values.push(email);
   }
   if (role !== undefined) {
-    updates.push('role = $18');
+    updates.push('role = ?');
     values.push(role);
   }
   if (hostelId !== undefined) {
-    updates.push('hostel_id = $19');
+    updates.push('hostel_id = ?');
     values.push(hostelId);
   }
   if (permissions !== undefined) {
-    updates.push('permissions = $20');
+    updates.push('permissions = ?');
     values.push(permissions ? JSON.stringify(permissions) : null);
   }
 
-  if (result.rows.length === 0) {
+  if (updates.length === 0) {
     return res.status(400).json({ error: 'No fields to update' });
   }
 
   values.push(req.params.id);
   await pool.query(
-    `UPDATE users SET ${updates.join(', ')} WHERE id = $22`,
+    `UPDATE users SET ${updates.join(', ')} WHERE id = ?`,
     values
   );
 
@@ -182,12 +182,12 @@ router.put('/:id', authenticateToken, asyncHandler(async (req, res) => {
 // Delete user
 router.delete('/:id', authenticateToken, requireRole('super_admin', 'owner'), asyncHandler(async (req, res) => {
   // Check permissions
-  const result = await pool.query('SELECT * FROM users WHERE id = $23', [req.params.id]);
-  if (result.rows.length === 0) {
+  const [result] = await pool.query('SELECT * FROM users WHERE id = ?', [req.params.id]);
+  if (result.length === 0) {
     return res.status(404).json({ error: 'User not found' });
   }
 
-  const targetUser = result.rows[0];
+  const targetUser = result[0];
 
   // Owners can only delete managers in their hostel
   if (req.user.role === 'owner') {
@@ -204,7 +204,7 @@ router.delete('/:id', authenticateToken, requireRole('super_admin', 'owner'), as
     return res.status(403).json({ error: 'Cannot delete yourself' });
   }
 
-  await pool.query('DELETE FROM users WHERE id = $24', [req.params.id]);
+  await pool.query('DELETE FROM users WHERE id = ?', [req.params.id]);
   res.json({ message: 'User deleted successfully' });
 }));
 

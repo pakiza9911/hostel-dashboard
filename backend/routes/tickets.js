@@ -87,16 +87,16 @@ router.put('/:id', authenticateToken, asyncHandler(async (req, res) => {
   const { title, description, category, priority, status, assignedTo } = req.body;
 
   // Check permissions
-  const result = await pool.query('SELECT * FROM maintenance_tickets WHERE id = $11', [req.params.id]);
-  if (result.rows.length === 0) {
+  const [result] = await pool.query('SELECT * FROM maintenance_tickets WHERE id = ?', [req.params.id]);
+  if (result.length === 0) {
     return res.status(404).json({ error: 'Ticket not found' });
   }
 
-  if (req.user.role !== 'super_admin' && result.rows[0].hostel_id !== req.user.hostelId) {
+  if (req.user.role !== 'super_admin' && result[0].hostel_id !== req.user.hostelId) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  const currentTicket = result.rows[0];
+  const currentTicket = result[0];
   const resolvedAt = (status === 'resolved' || status === 'closed') && currentTicket.status !== 'resolved' && currentTicket.status !== 'closed' 
     ? new Date().toISOString() 
      : currentTicket.resolved_at;
@@ -106,41 +106,41 @@ router.put('/:id', authenticateToken, asyncHandler(async (req, res) => {
   const values = [];
 
   if (title !== undefined) {
-    updates.push('title = $13');
+    updates.push('title = ?');
     values.push(title);
   }
   if (description !== undefined) {
-    updates.push('description = $14');
+    updates.push('description = ?');
     values.push(description);
   }
   if (category !== undefined) {
-    updates.push('category = $15');
+    updates.push('category = ?');
     values.push(category);
   }
   if (priority !== undefined) {
-    updates.push('priority = $16');
+    updates.push('priority = ?');
     values.push(priority);
   }
   if (status !== undefined) {
-    updates.push('status = $17');
+    updates.push('status = ?');
     values.push(status);
   }
   if (assignedTo !== undefined) {
-    updates.push('assigned_to = $18');
+    updates.push('assigned_to = ?');
     values.push(assignedTo);
   }
   if (status !== undefined && (status === 'resolved' || status === 'closed')) {
-    updates.push('resolved_at = $19');
+    updates.push('resolved_at = ?');
     values.push(resolvedAt);
   }
 
-  if (result.rows.length === 0) {
+  if (result.length === 0) {
     return res.status(400).json({ error: 'No fields to update' });
   }
 
   values.push(req.params.id);
   await pool.query(
-    `UPDATE maintenance_tickets SET ${updates.join(', ')} WHERE id = $20`,
+    `UPDATE maintenance_tickets SET ${updates.join(', ')} WHERE id = ?`,
     values
   );
 
@@ -150,16 +150,16 @@ router.put('/:id', authenticateToken, asyncHandler(async (req, res) => {
 // Delete ticket
 router.delete('/:id', authenticateToken, asyncHandler(async (req, res) => {
   // Check permissions
-  const result = await pool.query('SELECT * FROM maintenance_tickets WHERE id = $21', [req.params.id]);
-  if (result.rows.length === 0) {
+  const [result] = await pool.query('SELECT * FROM maintenance_tickets WHERE id = ?', [req.params.id]);
+  if (result.length === 0) {
     return res.status(404).json({ error: 'Ticket not found' });
   }
 
-  if (req.user.role !== 'super_admin' && result.rows[0].hostel_id !== req.user.hostelId) {
+  if (req.user.role !== 'super_admin' && result[0].hostel_id !== req.user.hostelId) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  await pool.query('DELETE FROM maintenance_tickets WHERE id = $22', [req.params.id]);
+  await pool.query('DELETE FROM maintenance_tickets WHERE id = ?', [req.params.id]);
   res.json({ message: 'Ticket deleted successfully' });
 }));
 

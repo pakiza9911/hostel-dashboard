@@ -90,7 +90,7 @@ router.post('/', authenticateToken, requireRole('super_admin'), asyncHandler(asy
 
   const id = `h_${Date.now()}`;
   await pool.query(
-    'INSERT INTO hostels (id, name, owner_id, address, city, phone, email, facilities) VALUES ($5, $6, $7, $8, $9, $10, $11, $12)',
+    'INSERT INTO hostels (id, name, owner_id, address, city, phone, email, facilities) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
     [id, name, ownerId, address || null, city || null, phone || null, email || null, facilities ? JSON.stringify(facilities) : JSON.stringify([])]
   );
 
@@ -103,14 +103,14 @@ router.put('/:id', authenticateToken, asyncHandler(async (req, res) => {
   
   // Check permissions
   if (req.user.role !== 'super_admin') {
-    const result = await pool.query('SELECT * FROM hostels WHERE id = $14', [req.params.id]);
-    if (result.rows.length === 0 || result.rows[0].id !== req.user.hostelId) {
+    const [result] = await pool.query('SELECT * FROM hostels WHERE id = ?', [req.params.id]);
+    if (result.length === 0 || result[0].id !== req.user.hostelId) {
       return res.status(403).json({ error: 'Insufficient permissions' });
     }
   }
 
   await pool.query(
-    'UPDATE hostels SET name = $15, address = $16, city = $17, phone = $18, email = $19, facilities = $20, status = ? WHERE id = $22',
+    'UPDATE hostels SET name = ?, address = ?, city = ?, phone = ?, email = ?, facilities = ?, status = ? WHERE id = ?',
     [name, address, city, phone, email, facilities ? JSON.stringify(facilities)  : null, status, req.params.id]
   );
 
@@ -120,19 +120,19 @@ router.put('/:id', authenticateToken, asyncHandler(async (req, res) => {
 // Delete hostel (super admin only)
 router.delete('/:id', authenticateToken, requireRole('super_admin'), asyncHandler(async (req, res) => {
   // Get the hostel's owner_id before deleting
-  const result = await pool.query('SELECT owner_id FROM hostels WHERE id = $24', [req.params.id]);
+  const [result] = await pool.query('SELECT owner_id FROM hostels WHERE id = ?', [req.params.id]);
   
-  if (result.rows.length === 0) {
+  if (result.length === 0) {
     return res.status(404).json({ error: 'Hostel not found' });
   }
 
-  const ownerId = result.rows[0].owner_id;
+  const ownerId = result[0].owner_id;
 
   // Delete the hostel (this will cascade delete rooms, beds, tenants, payments, tickets)
-  await pool.query('DELETE FROM hostels WHERE id = $25', [req.params.id]);
+  await pool.query('DELETE FROM hostels WHERE id = ?', [req.params.id]);
 
   // Delete the owner user (if they're an owner role, not super admin)
-  await pool.query('DELETE FROM users WHERE id = ? AND role = $27', [ownerId, 'owner']);
+  await pool.query('DELETE FROM users WHERE id = ? AND role = ?', [ownerId, 'owner']);
 
   res.json({ message : 'Hostel and owner deleted successfully' });
 }));
