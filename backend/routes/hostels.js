@@ -11,12 +11,12 @@ router.get('/', authenticateToken, asyncHandler(async (req, res) => {
   const params = [];
 
   if (req.user.role !== 'super_admin') {
-    query += ' WHERE id = $1';
+    query += ' WHERE id = ?';
     params.push(req.user.hostelId);
   }
 
-  const result = await pool.query(query, params);
-  const parsedHostels = hostels.map((row) => {
+  const [hostels] = await pool.query(query, params);
+  const parsedHostels = hostels.map((h) => {
     let facilities = [];
     try {
       facilities = h.facilities ? JSON.parse(h.facilities) : [];
@@ -45,16 +45,16 @@ router.get('/', authenticateToken, asyncHandler(async (req, res) => {
 
 // Get single hostel
 router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
-  const result = await pool.query(
-    'SELECT * FROM hostels WHERE id = $3',
+  const [result] = await pool.query(
+    'SELECT * FROM hostels WHERE id = ?',
     [req.params.id]
   );
 
-  if (result.rows.length === 0) {
+  if (result.length === 0) {
     return res.status(404).json({ error: 'Hostel not found' });
   }
 
-  const h = result.rows[0];
+  const h = result[0];
   let facilities = [];
   try {
     facilities = h.facilities ? JSON.parse(h.facilities) : [];

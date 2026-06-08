@@ -11,15 +11,15 @@ router.get('/', authenticateToken, asyncHandler(async (req, res) => {
   const params = [];
 
   if (req.user.role === 'owner') {
-    query += ' WHERE hostel_id = $1';
+    query += ' WHERE hostel_id = ?';
     params.push(req.user.hostelId);
   } else if (req.user.role === 'manager') {
-    query += ' WHERE id = $2';
+    query += ' WHERE id = ?';
     params.push(req.user.id);
   }
 
-  const result = await pool.query(query, params);
-  const parsedUsers = users.map((row) => {
+  const [users] = await pool.query(query, params);
+  const parsedUsers = users.map((u) => {
     let permissions = [];
     try {
       permissions = u.permissions ? JSON.parse(u.permissions) : [];
@@ -41,16 +41,16 @@ router.get('/', authenticateToken, asyncHandler(async (req, res) => {
 
 // Get single user
 router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
-  const result = await pool.query(
-    'SELECT id, name, email, role, hostel_id, permissions, created_at FROM users WHERE id = $4',
+  const [result] = await pool.query(
+    'SELECT id, name, email, role, hostel_id, permissions, created_at FROM users WHERE id = ?',
     [req.params.id]
   );
 
-  if (result.rows.length === 0) {
+  if (result.length === 0) {
     return res.status(404).json({ error: 'User not found' });
   }
 
-  const u = result.rows[0];
+  const u = result[0];
   let permissions = [];
   try {
     permissions = u.permissions ? JSON.parse(u.permissions) : [];

@@ -11,12 +11,12 @@ router.get('/', authenticateToken, asyncHandler(async (req, res) => {
   const params = [];
 
   if (req.user.role !== 'super_admin') {
-    query += ' WHERE hostel_id = $1';
+    query += ' WHERE hostel_id = ?';
     params.push(req.user.hostelId);
   }
 
-  const result = await pool.query(query, params);
-  res.json(tickets.map((row) => ({
+  const [tickets] = await pool.query(query, params);
+  res.json(tickets.map((t) => ({
     id: t.id,
     hostelId: t.hostel_id,
     roomId: t.room_id,
@@ -34,16 +34,16 @@ router.get('/', authenticateToken, asyncHandler(async (req, res) => {
 
 // Get single ticket
 router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
-  const result = await pool.query(
-    'SELECT * FROM maintenance_tickets WHERE id = $2',
+  const [result] = await pool.query(
+    'SELECT * FROM maintenance_tickets WHERE id = ?',
     [req.params.id]
   );
 
-  if (result.rows.length === 0) {
+  if (result.length === 0) {
     return res.status(404).json({ error: 'Ticket not found' });
   }
 
-  const t = result.rows[0];
+  const t = result[0];
   res.json({
     id: t.id,
     hostelId: t.hostel_id,
@@ -75,7 +75,7 @@ router.post('/', authenticateToken, asyncHandler(async (req, res) => {
 
   const id = `tk_${Date.now()}`;
   await pool.query(
-    'INSERT INTO maintenance_tickets (id, hostel_id, room_id, tenant_id, title, description, category, priority) VALUES ($3, $4, $5, $6, $7, $8, $9, $10)',
+    'INSERT INTO maintenance_tickets (id, hostel_id, room_id, tenant_id, title, description, category, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
     [id, hostelId, roomId || null, tenantId || null, title, description || null, category, priority || 'medium']
   );
 

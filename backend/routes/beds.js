@@ -11,12 +11,12 @@ router.get('/', authenticateToken, asyncHandler(async (req, res) => {
   const params = [];
 
   if (req.user.role !== 'super_admin') {
-    query += ' WHERE hostel_id = $1';
+    query += ' WHERE hostel_id = ?';
     params.push(req.user.hostelId);
   }
 
-  const result = await pool.query(query, params);
-  res.json(beds.map((row) => ({
+  const [beds] = await pool.query(query, params);
+  res.json(beds.map((b) => ({
     id: b.id,
     roomId: b.room_id,
     hostelId: b.hostel_id,
@@ -28,16 +28,16 @@ router.get('/', authenticateToken, asyncHandler(async (req, res) => {
 
 // Get single bed
 router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
-  const result = await pool.query(
-    'SELECT * FROM beds WHERE id = $2',
+  const [result] = await pool.query(
+    'SELECT * FROM beds WHERE id = ?',
     [req.params.id]
   );
 
-  if (result.rows.length === 0) {
+  if (result.length === 0) {
     return res.status(404).json({ error: 'Bed not found' });
   }
 
-  const b = result.rows[0];
+  const b = result[0];
   res.json({
     id: b.id,
     roomId: b.room_id,

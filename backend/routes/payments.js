@@ -11,12 +11,12 @@ router.get('/', authenticateToken, asyncHandler(async (req, res) => {
   const params = [];
 
   if (req.user.role !== 'super_admin') {
-    query += ' WHERE hostel_id = $1';
+    query += ' WHERE hostel_id = ?';
     params.push(req.user.hostelId);
   }
 
-  const result = await pool.query(query, params);
-  res.json(payments.map((row) => ({
+  const [payments] = await pool.query(query, params);
+  res.json(payments.map((p) => ({
     id: p.id,
     hostelId: p.hostel_id,
     tenantId: p.tenant_id,
@@ -34,16 +34,16 @@ router.get('/', authenticateToken, asyncHandler(async (req, res) => {
 
 // Get single payment
 router.get('/:id', authenticateToken, asyncHandler(async (req, res) => {
-  const result = await pool.query(
-    'SELECT * FROM payments WHERE id = $2',
+  const [result] = await pool.query(
+    'SELECT * FROM payments WHERE id = ?',
     [req.params.id]
   );
 
-  if (result.rows.length === 0) {
+  if (result.length === 0) {
     return res.status(404).json({ error: 'Payment not found' });
   }
 
-  const p = result.rows[0];
+  const p = result[0];
   res.json({
     id: p.id,
     hostelId: p.hostel_id,

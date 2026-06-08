@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const API_URL = 'http://localhost:5001/api';
+const API_URL = 'https://hostel-dashboard-production.up.railway.app/api';
 
 let authToken = '';
 let hostelId = '';
@@ -46,12 +46,12 @@ function logInfo(message) {
   log(`ℹ ${message}`, 'blue');
 }
 
-async function testLogin() {
-  logSection('1. Testing Login API');
+async function testLogin(email, password, role) {
+  logSection(`1. Testing Login API (${role})`);
   try {
     const response = await axios.post(`${API_URL}/auth/login`, {
-      email: 'abdulwajid9997@gmail.com',
-      password: 'wajid123'
+      email,
+      password
     });
     authToken = response.data.token;
     userId = response.data.user.id;
@@ -487,11 +487,11 @@ async function testUsersAPI() {
   }
 }
 
-async function runAllTests() {
-  logSection('Starting API Tests for Owner Role');
-  logInfo('Testing with owner: abdulwajid9997@gmail.com');
+async function runAllTests(email, password, role) {
+  logSection(`Starting API Tests for ${role} Role`);
+  logInfo(`Testing with ${role}: ${email}`);
   
-  const loginSuccess = await testLogin();
+  const loginSuccess = await testLogin(email, password, role);
   if (!loginSuccess) {
     logError('Cannot proceed without authentication. Exiting.');
     return;
@@ -509,4 +509,22 @@ async function runAllTests() {
   logSuccess('All tests finished!');
 }
 
-runAllTests().catch(console.error);
+async function runAllTestsForBothRoles() {
+  // Test Super Admin
+  await runAllTests('admin@hostelhub.pk', 'admin123', 'super_admin');
+  
+  // Reset variables
+  authToken = '';
+  userId = '';
+  hostelId = '';
+  roomId = '';
+  bedId = '';
+  tenantId = '';
+  paymentId = '';
+  ticketId = '';
+  
+  // Test Owner
+  await runAllTests('abdulwajid9997@gmail.com', 'wajid123', 'owner');
+}
+
+runAllTestsForBothRoles().catch(console.error);
