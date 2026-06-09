@@ -33,6 +33,7 @@ export function Rooms() {
     type: "double" as Room["type"],
     capacity: 2,
     rentPerBed: 6000,
+    facilities: [] as string[],
   });
 
   useEffect(() => {
@@ -97,7 +98,7 @@ export function Rooms() {
       type: roomForm.type,
       capacity: roomForm.capacity,
       rentPerBed: roomForm.rentPerBed,
-      facilities: ["WiFi", "Fan"],
+      facilities: roomForm.facilities,
       status: "active",
     };
     try {
@@ -119,6 +120,7 @@ export function Rooms() {
         type: "double",
         capacity: 2,
         rentPerBed: 6000,
+        facilities: [],
       });
     } catch (error) {
       console.error("Failed to create room:", error);
@@ -388,6 +390,23 @@ export function Rooms() {
               onChange={(e) =>
                 setRoomForm({ ...roomForm, rentPerBed: +e.target.value })
               }
+            />
+          </div>
+          <div className="col-span-2">
+            <label className="label">Facilities (comma-separated)</label>
+            <input
+              className="input"
+              value={roomForm.facilities.join(", ")}
+              onChange={(e) =>
+                setRoomForm({
+                  ...roomForm,
+                  facilities: e.target.value
+                    .split(",")
+                    .map((f) => f.trim())
+                    .filter((f) => f),
+                })
+              }
+              placeholder="e.g. WiFi, Fan, AC"
             />
           </div>
         </div>
