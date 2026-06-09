@@ -20,7 +20,7 @@ interface DataState {
   addHostel: (h: Hostel) => Promise<Hostel>;
   updateHostel: (id: string, patch: Partial<Hostel>) => Promise<void>;
   deleteHostel: (id: string) => Promise<void>;
-  addRoom: (r: Room) => Promise<void>;
+  addRoom: (r: Room) => Promise<Room>;
   updateRoom: (id: string, patch: Partial<Room>) => Promise<void>;
   deleteRoom: (id: string) => Promise<void>;
   addBed: (b: Bed) => Promise<void>;
@@ -116,11 +116,13 @@ export const useData = create<DataState>((set, get) => ({
   addRoom: async (r) => {
     set({ isLoading: true, error: null });
     try {
-      await roomsAPI.create(r);
-      const res = await roomsAPI.getAll();
-      set({ rooms: res.data, isLoading: false });
+      const res = await roomsAPI.create(r);
+      const roomsRes = await roomsAPI.getAll();
+      set({ rooms: roomsRes.data, isLoading: false });
+      return res.data;
     } catch (error: any) {
       set({ error: error.response?.data?.error || 'Failed to create room', isLoading: false });
+      throw error;
     }
   },
   updateRoom: async (id, patch) => {

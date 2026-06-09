@@ -86,12 +86,11 @@ export function Rooms() {
   const tenantById = (id?: string) => tenants.find((t) => t.id === id);
   const roomBeds = (roomId: string) => beds.filter((b) => b.roomId === roomId);
   const unassignedTenants = tenants.filter((t) => !t.bedId);
-  const submitRoom = () => {
+  const submitRoom = async () => {
     const hostelId = hostelIds[0];
     if (!hostelId || !roomForm.number) return;
-    const roomId = `${hostelId}_r_${Date.now()}`;
     const room: Room = {
-      id: roomId,
+      id: "", // Backend will generate this
       hostelId,
       number: roomForm.number,
       floor: roomForm.floor,
@@ -101,24 +100,29 @@ export function Rooms() {
       facilities: ["WiFi", "Fan"],
       status: "active",
     };
-    addRoom(room);
-    for (let i = 0; i < roomForm.capacity; i++) {
-      addBed({
-        id: `${roomId}_b${i}`,
-        roomId,
-        hostelId,
-        label: String.fromCharCode(65 + i),
-        status: "vacant",
+    try {
+      const createdRoom = await addRoom(room);
+      const actualRoomId = createdRoom.id;
+      for (let i = 0; i < roomForm.capacity; i++) {
+        addBed({
+          id: `${actualRoomId}_b${i}`,
+          roomId: actualRoomId,
+          hostelId,
+          label: String.fromCharCode(65 + i),
+          status: "vacant",
+        });
+      }
+      setShowAddRoom(false);
+      setRoomForm({
+        number: "",
+        floor: 1,
+        type: "double",
+        capacity: 2,
+        rentPerBed: 6000,
       });
+    } catch (error) {
+      console.error("Failed to create room:", error);
     }
-    setShowAddRoom(false);
-    setRoomForm({
-      number: "",
-      floor: 1,
-      type: "double",
-      capacity: 2,
-      rentPerBed: 6000,
-    });
   };
 
   const bedColor = (b: Bed) => {
