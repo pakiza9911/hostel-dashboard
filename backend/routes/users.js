@@ -158,6 +158,13 @@ router.put('/:id', authenticateToken, asyncHandler(async (req, res) => {
     values.push(role);
   }
   if (hostelId !== undefined) {
+    // Verify the hostel exists before updating
+    if (hostelId !== null) {
+      const [hostelCheck] = await pool.query('SELECT id FROM hostels WHERE id = ?', [hostelId]);
+      if (hostelCheck.length === 0) {
+        return res.status(400).json({ error: 'Hostel not found' });
+      }
+    }
     updates.push('hostel_id = ?');
     values.push(hostelId);
   }

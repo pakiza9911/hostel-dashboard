@@ -17,7 +17,7 @@ interface DataState {
   selectedHostelId: string | null;
   setSelectedHostelId: (id: string | null) => void;
   fetchAll: () => Promise<void>;
-  addHostel: (h: Hostel) => Promise<void>;
+  addHostel: (h: Hostel) => Promise<Hostel>;
   updateHostel: (id: string, patch: Partial<Hostel>) => Promise<void>;
   deleteHostel: (id: string) => Promise<void>;
   addRoom: (r: Room) => Promise<void>;
@@ -82,10 +82,11 @@ export const useData = create<DataState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       console.log('Creating hostel with data:', h);
-      await hostelsAPI.create(h);
+      const res = await hostelsAPI.create(h);
       console.log('Hostel created successfully');
-      const res = await hostelsAPI.getAll();
-      set({ hostels: res.data, isLoading: false });
+      const hostelsRes = await hostelsAPI.getAll();
+      set({ hostels: hostelsRes.data, isLoading: false });
+      return res.data;
     } catch (error: any) {
       console.error('Failed to create hostel:', error.response?.data || error.message);
       set({ error: error.response?.data?.error || 'Failed to create hostel', isLoading: false });

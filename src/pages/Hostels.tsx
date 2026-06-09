@@ -101,7 +101,6 @@ export function Hostels() {
         alert("Owner email and password are required");
         return;
       }
-      const hostelId = `h_${Date.now()}`;
 
       // Create user first (without hostelId initially)
       const owner: User = {
@@ -128,9 +127,9 @@ export function Hostels() {
           "now creating hostel",
         );
 
-        // Now create hostel with the user's ID
+        // Now create hostel with the user's ID (backend will generate ID)
         const hostel: Hostel = {
-          id: hostelId,
+          id: "", // Backend will generate this
           name: form.name,
           ownerId,
           address: form.address,
@@ -145,14 +144,17 @@ export function Hostels() {
           createdAt: new Date().toISOString(),
           facilities: [],
         };
-        await addHostel(hostel);
+        const createdHostel = await addHostel(hostel);
+        const actualHostelId = createdHostel.id;
         console.log(
-          "Hostel created successfully, now updating user with hostelId",
+          "Hostel created successfully with ID:",
+          actualHostelId,
+          "now updating user with hostelId",
         );
 
-        // Update user with hostelId
+        // Update user with the actual hostel ID from backend response
         try {
-          await updateUser(ownerId, { hostelId });
+          await updateUser(ownerId, { hostelId: actualHostelId });
           console.log("User updated with hostelId");
         } catch (updateError) {
           console.error("Failed to update user with hostelId:", updateError);
