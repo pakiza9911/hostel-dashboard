@@ -134,7 +134,7 @@ router.put('/:id', authenticateToken, asyncHandler(async (req, res) => {
     values.push(resolvedAt);
   }
 
-  if (result.length === 0) {
+  if (updates.length === 0) {
     return res.status(400).json({ error: 'No fields to update' });
   }
 
