@@ -82,6 +82,7 @@ export interface Tenant {
   status: 'active' | 'checked_out' | 'pending';
   occupation?: string;
   notes?: string;
+  idCardImage?: string; // Base64 encoded image or URL
 }
 
 export interface Payment {

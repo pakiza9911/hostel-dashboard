@@ -1,6 +1,16 @@
 import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Plus, Search, Phone, Mail, Calendar, BedDouble } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Phone,
+  Mail,
+  Calendar,
+  BedDouble,
+  LogOut,
+  Upload,
+  FileImage,
+} from "lucide-react";
 import { PageHeader } from "../components/ui/PageHeader";
 import { Modal } from "../components/ui/Modal";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -43,7 +53,10 @@ export function Tenants() {
     monthlyRent: 6000,
     securityDeposit: 12000,
     occupation: "",
+    idCardImage: "",
   });
+  const [idCardFile, setIdCardFile] = useState<File | null>(null);
+  const [idCardPreview, setIdCardPreview] = useState<string>("");
 
   useEffect(() => {
     if (user) {
@@ -75,7 +88,7 @@ export function Tenants() {
   }
 
   const submit = () => {
-    if (!form.name || !form.email || !hostelIds[0]) return;
+    if (!form.name || !form.email || !hostelIds[0] || !form.idCardImage) return;
     const tenant: Tenant = {
       id: `t_${Date.now()}`,
       hostelId: hostelIds[0],
@@ -93,6 +106,7 @@ export function Tenants() {
       securityDeposit: form.securityDeposit ?? 12000,
       status: "pending",
       occupation: form.occupation,
+      idCardImage: form.idCardImage,
     };
     addTenant(tenant);
     setShowAdd(false);
@@ -109,7 +123,10 @@ export function Tenants() {
       monthlyRent: 6000,
       securityDeposit: 12000,
       occupation: "",
+      idCardImage: "",
     });
+    setIdCardFile(null);
+    setIdCardPreview("");
   };
 
   const checkout = (t: Tenant) => {
@@ -257,6 +274,15 @@ export function Tenants() {
                           >
                             View
                           </button>
+                          {t.status === "active" && (
+                            <button
+                              onClick={() => checkout(t)}
+                              className="btn-danger text-xs py-1.5"
+                              title="Check Out"
+                            >
+                              <LogOut size={14} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </motion.tr>
@@ -278,7 +304,11 @@ export function Tenants() {
             <button onClick={() => setShowAdd(false)} className="btn-secondary">
               Cancel
             </button>
-            <button onClick={submit} className="btn-primary">
+            <button
+              onClick={submit}
+              disabled={!form.name || !form.email || !form.idCardImage}
+              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               Create Tenant
             </button>
           </div>
@@ -405,6 +435,80 @@ export function Tenants() {
               }
             />
           </div>
+          <div className="md:col-span-2">
+            <label className="label">
+              ID Card Image *{" "}
+              <span className="text-ink-400 text-xs">(Required)</span>
+            </label>
+            <div className="flex items-center gap-4">
+              <label className="flex-1 cursor-pointer">
+                <div
+                  className={cn(
+                    "border-2 border-dashed rounded-xl p-4 text-center transition-colors",
+                    idCardPreview
+                      ? "border-brand-400 bg-brand-50"
+                      : "border-ink-300 hover:border-brand-400 hover:bg-ink-50",
+                  )}
+                >
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setIdCardFile(file);
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          const base64 = reader.result as string;
+                          setIdCardPreview(base64);
+                          setForm({ ...form, idCardImage: base64 });
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <div className="flex flex-col items-center gap-2">
+                    {idCardPreview ? (
+                      <>
+                        <FileImage className="text-brand-600" size={24} />
+                        <span className="text-sm text-brand-700 font-medium">
+                          {idCardFile?.name}
+                        </span>
+                        <span className="text-xs text-ink-500">
+                          Click to change
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="text-ink-400" size={24} />
+                        <span className="text-sm text-ink-600">
+                          Click to upload ID card image
+                        </span>
+                        <span className="text-xs text-ink-400">
+                          JPG, PNG up to 5MB
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </label>
+              {idCardPreview && (
+                <div className="w-24 h-24 flex-shrink-0">
+                  <img
+                    src={idCardPreview}
+                    alt="ID Card Preview"
+                    className="w-full h-full object-cover rounded-lg border border-ink-200"
+                  />
+                </div>
+              )}
+            </div>
+            {!form.idCardImage && (
+              <p className="text-xs text-red-500 mt-1">
+                ID card image is required
+              </p>
+            )}
+          </div>
         </div>
       </Modal>
 
@@ -472,6 +576,25 @@ export function Tenants() {
                 value={`${viewing.idType.toUpperCase()}: ${viewing.idNumber}`}
               />
             </div>
+            {viewing.idCardImage && (
+              <div className="mt-4">
+                <label className="label flex items-center gap-2">
+                  <FileImage size={14} />
+                  ID Card Image
+                </label>
+                <div className="mt-1">
+                  <img
+                    src={viewing.idCardImage}
+                    alt="ID Card"
+                    className="max-w-xs max-h-48 object-contain rounded-lg border border-ink-200 cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => window.open(viewing.idCardImage, "_blank")}
+                  />
+                  <p className="text-xs text-ink-400 mt-1">
+                    Click image to view full size
+                  </p>
+                </div>
+              </div>
+            )}
             <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-ink-100">
               {viewing.bedId && (
                 <button
